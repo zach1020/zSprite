@@ -56,7 +56,7 @@ export function applyChromaKey(imageData: ImageData, settings: ChromaKeySettings
 
 export function sampleBackgroundColor(imageData: ImageData): RGB {
   const { data, width, height } = imageData;
-  const sampleSize = Math.max(4, Math.min(24, Math.floor(Math.min(width, height) * 0.08)));
+  const sampleSize = Math.max(1, Math.min(24, width, height, Math.max(4, Math.floor(Math.min(width, height) * 0.08))));
   const patches = [
     { x: 0, y: 0 },
     { x: width - sampleSize, y: 0 },

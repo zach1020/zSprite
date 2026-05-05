@@ -9,6 +9,8 @@ import { DEFAULT_API_SERVICES, type ServiceApiKey } from "@/types/zsprite";
 
 const STORAGE_KEY = "zsprite.local-api-keys.v1";
 const STORAGE_EVENT = "zsprite:api-keys";
+let cachedStorageValue: string | null = null;
+let cachedServices: ServiceApiKey[] = DEFAULT_API_SERVICES;
 
 function mergeDefaultServices(saved: ServiceApiKey[]) {
   const savedById = new Map(saved.map((service) => [service.id, service]));
@@ -17,29 +19,44 @@ function mergeDefaultServices(saved: ServiceApiKey[]) {
   return [...merged, ...custom];
 }
 
+function subscribeToApiKeys(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(STORAGE_EVENT, onStoreChange);
+
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(STORAGE_EVENT, onStoreChange);
+  };
+}
+
+function getApiKeysSnapshot() {
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+
+    if (!saved) {
+      cachedStorageValue = null;
+      cachedServices = DEFAULT_API_SERVICES;
+      return cachedServices;
+    }
+
+    if (saved === cachedStorageValue) {
+      return cachedServices;
+    }
+
+    cachedStorageValue = saved;
+    cachedServices = mergeDefaultServices(JSON.parse(saved) as ServiceApiKey[]);
+    return cachedServices;
+  } catch {
+    cachedStorageValue = null;
+    cachedServices = DEFAULT_API_SERVICES;
+    return cachedServices;
+  }
+}
+
 export function ApiKeysPanel() {
   const services = useSyncExternalStore(
-    (onStoreChange) => {
-      window.addEventListener("storage", onStoreChange);
-      window.addEventListener(STORAGE_EVENT, onStoreChange);
-
-      return () => {
-        window.removeEventListener("storage", onStoreChange);
-        window.removeEventListener(STORAGE_EVENT, onStoreChange);
-      };
-    },
-    () => {
-      try {
-        const saved = window.localStorage.getItem(STORAGE_KEY);
-        if (!saved) {
-          return DEFAULT_API_SERVICES;
-        }
-
-        return mergeDefaultServices(JSON.parse(saved) as ServiceApiKey[]);
-      } catch {
-        return DEFAULT_API_SERVICES;
-      }
-    },
+    subscribeToApiKeys,
+    getApiKeysSnapshot,
     () => DEFAULT_API_SERVICES,
   );
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set());
