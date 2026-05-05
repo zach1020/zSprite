@@ -1,7 +1,7 @@
 import { cloneImageData } from "@/lib/canvas";
-import { colorDistance, getKeyColorRgb, reduceSpill } from "@/lib/color";
+import { chromaKeyDistance, getKeyColorRgb, reduceSpill } from "@/lib/color";
 import { clamp } from "@/lib/utils";
-import type { ChromaKeySettings } from "@/types/zsprite";
+import type { ChromaKeySettings, RGB } from "@/types/zsprite";
 
 export function applyChromaKey(imageData: ImageData, settings: ChromaKeySettings) {
   const output = cloneImageData(imageData);
@@ -30,7 +30,7 @@ export function applyChromaKey(imageData: ImageData, settings: ChromaKeySettings
       b: data[index + 2],
     };
 
-    const distance = colorDistance(rgb, keyColor);
+    const distance = chromaKeyDistance(rgb, keyColor);
     let nextAlpha = alpha;
 
     if (distance <= tolerance) {
@@ -52,4 +52,52 @@ export function applyChromaKey(imageData: ImageData, settings: ChromaKeySettings
   }
 
   return output;
+}
+
+export function sampleBackgroundColor(imageData: ImageData): RGB {
+  const { data, width, height } = imageData;
+  const sampleSize = Math.max(4, Math.min(24, Math.floor(Math.min(width, height) * 0.08)));
+  const patches = [
+    { x: 0, y: 0 },
+    { x: width - sampleSize, y: 0 },
+    { x: 0, y: height - sampleSize },
+    { x: width - sampleSize, y: height - sampleSize },
+  ];
+  const samples: RGB[] = [];
+
+  for (const patch of patches) {
+    const startX = clamp(patch.x, 0, Math.max(0, width - sampleSize));
+    const startY = clamp(patch.y, 0, Math.max(0, height - sampleSize));
+
+    for (let y = startY; y < startY + sampleSize; y += 1) {
+      for (let x = startX; x < startX + sampleSize; x += 1) {
+        const index = (y * width + x) * 4;
+
+        if (data[index + 3] === 0) {
+          continue;
+        }
+
+        samples.push({
+          r: data[index],
+          g: data[index + 1],
+          b: data[index + 2],
+        });
+      }
+    }
+  }
+
+  if (!samples.length) {
+    return { r: 0, g: 255, b: 0 };
+  }
+
+  const median = (channel: keyof RGB) => {
+    const values = samples.map((sample) => sample[channel]).sort((a, b) => a - b);
+    return values[Math.floor(values.length / 2)];
+  };
+
+  return {
+    r: median("r"),
+    g: median("g"),
+    b: median("b"),
+  };
 }

@@ -24,6 +24,8 @@ import { UploadDropzone } from "@/components/UploadDropzone";
 import { VideoLoopEditor } from "@/components/VideoLoopEditor";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { sampleBackgroundColor } from "@/lib/chroma-key";
+import { rgbToHex } from "@/lib/color";
 import { downloadFramesZip, downloadSpriteSheet } from "@/lib/export-sprites";
 import { estimateFrameCount } from "@/lib/frames";
 import { extractFramesFromVideo, processFrames, revokeFrameUrls } from "@/lib/process-frames";
@@ -464,6 +466,24 @@ export function ZSpriteStudio() {
     setError(null);
   };
 
+  const handleSampleBackground = () => {
+    const sampleFrame = includedRawFrames[0] ?? rawFrames[0];
+
+    if (!sampleFrame) {
+      setError("Extract frames before sampling a background color.");
+      return;
+    }
+
+    const sampledColor = sampleBackgroundColor(sampleFrame.imageData);
+    setChromaKey({
+      enabled: true,
+      keyColor: "custom",
+      customColor: rgbToHex(sampledColor),
+    });
+    setPreviewBeforeAfter("after");
+    setError(null);
+  };
+
   const handleExportSheet = async () => {
     if (!processedFrames.length) {
       setError("Process at least one included frame before exporting.");
@@ -631,6 +651,7 @@ export function ZSpriteStudio() {
               previewMode={previewBeforeAfter}
               onChange={setChromaKey}
               onPreviewModeChange={setPreviewBeforeAfter}
+              onSampleBackground={handleSampleBackground}
             />
           ),
         };

@@ -1,5 +1,7 @@
 "use client";
 
+import { Pipette } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ChromaKeyColor, ChromaKeySettings } from "@/types/zsprite";
@@ -11,6 +13,7 @@ type ChromaKeyPanelProps = {
   previewMode: "before" | "after";
   onChange: (partial: Partial<ChromaKeySettings>) => void;
   onPreviewModeChange: (value: "before" | "after") => void;
+  onSampleBackground: () => void;
 };
 
 export function ChromaKeyPanel({
@@ -18,6 +21,7 @@ export function ChromaKeyPanel({
   previewMode,
   onChange,
   onPreviewModeChange,
+  onSampleBackground,
 }: ChromaKeyPanelProps) {
   return (
     <div className="space-y-5">
@@ -52,6 +56,10 @@ export function ChromaKeyPanel({
             className="h-12 cursor-pointer p-2"
           />
         ) : null}
+        <Button variant="outline" className="w-full" onClick={onSampleBackground}>
+          <Pipette className="size-4" />
+          Sample Frame Background
+        </Button>
       </div>
 
       <label className="space-y-2">
@@ -116,7 +124,7 @@ export function ChromaKeyPanel({
           </Button>
         </div>
         <p className="text-sm leading-6 text-slate-400">
-          Removes colored edge artifacts left behind after chroma keying.
+          Compare extracted frames with the current keyed alpha output.
         </p>
       </div>
     </div>
